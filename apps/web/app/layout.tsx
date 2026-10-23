@@ -29,23 +29,23 @@ export const metadata = {
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://deepinterview.ai",
   ),
   title: {
-    default: "DeepInterview — Practice the interview out loud",
-    template: "%s · DeepInterview",
+    default: "local-ai-interviewer — Practice the interview out loud",
+    template: "%s · local-ai-interviewer",
   },
   description:
-    "Open-source, voice-first AI mock interviews. DeepInterview reads your CV and the job, researches the company, runs an adaptive voice interview, then shows you exactly what to fix. English-first, 10+ languages.",
-  applicationName: "DeepInterview",
+    "Open-source, voice-first AI mock interviews. local-ai-interviewer reads your CV and the job, researches the company, runs an adaptive voice interview, then shows you exactly what to fix. English-first, 10+ languages.",
+  applicationName: "local-ai-interviewer",
   openGraph: {
-    title: "DeepInterview — Practice the interview out loud",
+    title: "local-ai-interviewer — Practice the interview out loud",
     description:
       "Open-source, voice-first AI mock interviews — practice out loud, then pass the real one.",
     url: "/",
-    siteName: "DeepInterview",
+    siteName: "local-ai-interviewer",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "DeepInterview — Practice the interview out loud",
+    title: "local-ai-interviewer — Practice the interview out loud",
     description:
       "Open-source, voice-first AI mock interviews — practice out loud, then pass the real one.",
   },

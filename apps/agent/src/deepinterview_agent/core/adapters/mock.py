@@ -114,7 +114,9 @@ class MockSearch:
         return [
             SearchResult(
                 title=f"Mock result {i + 1} for {query}",
-                url=f"https://example.com/mock/{i + 1}",
+                # .invalid TLD (RFC 2606): can never resolve — no accidental clicks
+                # or requests; this URL is display-only fake citation content.
+                url=f"https://mock.invalid/mock-source/{i + 1}",
                 snippet=f"Deterministic mock snippet {i + 1} about {query} ({lang}).",
             )
             for i in range(n)

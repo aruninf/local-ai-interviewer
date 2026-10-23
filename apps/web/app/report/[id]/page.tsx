@@ -198,7 +198,7 @@ function StatusShell({ children }: { children: React.ReactNode }) {
     <main className="mx-auto max-w-[920px] px-6 py-12">
       <header className="flex items-center justify-between">
         <Link href="/" className="no-underline">
-          <Eyebrow>DeepInterview</Eyebrow>
+          <Eyebrow>local-ai-interviewer</Eyebrow>
         </Link>
       </header>
       <div className="mt-16 flex justify-center">{children}</div>
@@ -380,7 +380,7 @@ export default async function ReportPage({
       {/* Header */}
       <header className="flex items-center justify-between">
         <Link href="/" className="no-underline">
-          <Eyebrow>DeepInterview</Eyebrow>
+          <Eyebrow>local-ai-interviewer</Eyebrow>
         </Link>
         {loaded.state === "sample" && (
           <Badge variant="outline">Preview (sample data)</Badge>

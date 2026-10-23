@@ -20,7 +20,7 @@ export function Nav() {
         <a href="#top" className="flex items-center gap-[9px]">
           <BrandMark size={22} />
           <span className="text-[17px] font-semibold tracking-[-0.01em]">
-            DeepInterview
+            local-ai-interviewer
           </span>
         </a>
 

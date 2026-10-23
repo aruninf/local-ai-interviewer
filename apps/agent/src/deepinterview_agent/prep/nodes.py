@@ -10,7 +10,7 @@ each compiled node presents the ``(state)`` signature LangGraph expects.
 uploaded PDF/DOCX (``data:`` URL or fetched ``http(s)`` URL) into real text and,
 on any failure, falls back to the URL string itself as the document text. This
 keeps the whole pipeline — and the existing ``POST /api/prep`` test that points
-at an unreachable example.com — green without network access.
+at an unreachable mock.invalid placeholder — green without network access.
 """
 
 from __future__ import annotations

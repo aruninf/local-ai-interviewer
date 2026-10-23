@@ -20,7 +20,7 @@ export function Hero() {
             Then pass the real one.
           </h1>
           <p className="mb-7 max-w-[520px] text-lg text-ink-soft">
-            DeepInterview reads your CV and the job description, researches the
+            local-ai-interviewer reads your CV and the job description, researches the
             company, and runs a real voice mock interview — then shows you
             exactly what to fix. English-first, available in 10+ languages.
           </p>
