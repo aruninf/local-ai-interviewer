@@ -1,300 +1,79 @@
-<div align="center">
+# local-ai-interviewer
 
-<img src="assets/logo.svg" width="132" alt="DeepInterview" />
+**Voice-first AI mock interviewer + recruiter screening engine.** Upload a CV and a job description → an AI interviewer runs a structured interview → you get a scored report with transcript evidence behind every score.
 
-# local-ai-interviewer: Voice-First, Multilingual AI Mock Interviewer
+Built for two sides of the table:
+- **Candidates** — practice realistic mock interviews, get coached on weak areas.
+- **Hiring teams** — scheduled screening interviews with rubric-justified scorecards to defend decisions (design doc: [docs/RECRUITER.md](docs/RECRUITER.md)).
 
-> **Maintained by [Arun Kumar / @aruninf](https://github.com/aruninf)** — an Apache-2.0 fork of [ngoanpv/DeepInterview](https://github.com/ngoanpv/DeepInterview). All credit for the original architecture and code goes to the upstream author; see LICENSE and NOTICE.
+Maintained by [Arun Kumar / @aruninf](https://github.com/aruninf) · Apache-2.0 fork of [ngoanpv/DeepInterview](https://github.com/ngoanpv/DeepInterview) — all credit for the original architecture and code goes to the upstream author.
 
-### Practice the interview out loud. Then pass the real one. · Multi-agent · Open source
+## Requirements
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-4338CA.svg)](LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/aruninf/local-ai-interviewer/ci.yml?branch=main&label=build)](https://github.com/aruninf/local-ai-interviewer/actions)
-[![Stars](https://img.shields.io/github/stars/aruninf/local-ai-interviewer?style=social)](https://github.com/aruninf/local-ai-interviewer/stargazers)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-4338CA.svg)](apps/agent)
-[![pnpm](https://img.shields.io/badge/pnpm-workspace-4338CA.svg)](pnpm-workspace.yaml)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/fT7Ecbyq)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-4338CA.svg)](CONTRIBUTING.md)
+Node 20+ · pnpm 11 · Python 3.11+ with [uv](https://docs.astral.sh/uv/) · Docker
 
-**UI in English + Tiếng Việt · voice interviews in 7 languages incl. Vietnamese (more as packs land) · no sign-in required to self-host**
-
-**English** · [Tiếng Việt](README.vi.md)
-
-[Quickstart](#quickstart) · [Provider matrix](#provider-matrix) · [Why](#why-deepinterview) · [Features](#features) · [Architecture](#architecture)
-
-</div>
-
----
-
-<!-- HERO: live voice interview → scored report, recorded from the real app. -->
-![DeepInterview demo — a live voice interview with streaming captions, then the scored report](assets/demo.gif)
-
-> **Upload your CV and a job description. Talk to an AI interviewer. Get scored — and coached on exactly what you missed.** Built for two sides of the table: **candidates** practice mock interviews; **hiring teams** send scheduled screening interviews and get back rubric-justified scorecards with transcript evidence behind every score.
-
-This engine closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoning runs *before* the call (read the CV + the JD, research the company, build an adaptive question plan with a fixed rubric), a lean real-time voice loop runs the interview, then strong models score it — per competency, each score carrying quoted transcript **evidence** — and route the candidate into a study coach for weak areas. See **[docs/RECRUITER.md](docs/RECRUITER.md)** for the recruiter/scheduling feature plan (designed, not built yet).
-
-> **Honest status:** this is an **early open build**. The contracts, prep/live/post pipelines, web screens, and CLI are implemented and **run offline with mock adapters** (no API keys, tests green). Real-time voice, web research, and video avatars need provider keys. `docker compose up` brings up the full base stack (web + agent API + knowledge sidecar, healthy with zero keys); the live voice worker runs via `docker compose --profile live up` once LiveKit keys are set. We mark what's done honestly, per feature, throughout this README.
-
-## Quickstart
-
-> **No sign-in required.** The OSS self-host runs **anonymously** — setup, the live interview, and the report all work with **no account and no login**. (The report reads directly from the agent API.) Supabase auth + billing are a **hosted-only** layer; you don't need them to run the loop yourself.
->
-> **Zero-upload demo:** the `/setup` screen has a one-click **Quick demo** that fills a sample CV + JD, so you can try the whole loop without uploading anything.
-
-**Requirements:** Node **20+** (22 recommended — see [`.nvmrc`](.nvmrc)) · pnpm 11 · Python 3.11+ with [uv](https://docs.astral.sh/uv/) (for the agent) · Docker (for the full stack).
-
-### 1. Offline path (verified — no API keys needed)
-
-This is what's tested in CI today. It builds the contracts, runs the test suites, and exercises the prep/live/post pipelines against **mock adapters** — no provider keys required.
+## Setup
 
 ```bash
 git clone https://github.com/aruninf/local-ai-interviewer.git
 cd local-ai-interviewer
 
-pnpm install          # install the JS/TS workspace
-pnpm build            # build packages/shared (contracts) + cli + web
-pnpm test             # TS + Pydantic parity + pipeline tests (offline, mock adapters)
+pnpm install
+pnpm build        # must run before `init` — builds the CLI
+pnpm test         # offline tests, no keys needed
 
-pnpm deepinterview init   # scaffold .env from .env.example (fill in keys later)
+pnpm deepinterview init   # scaffold .env from .env.example
+docker compose up         # web :3000 + agent API :8000 + knowledge sidecar
 ```
 
-> `pnpm build` must run before `pnpm deepinterview init` — the CLI is built into `cli/dist/`.
-> For the Python agent: `uv --directory apps/agent sync` then `uv --directory apps/agent run pytest`.
+Runs with **zero API keys** (mock adapters) — the app is fully usable offline at [localhost:3000](http://localhost:3000).
 
-### 2. Real models via API keys (bring-your-own-key)
+### Real models
 
-Every stage takes exactly one env var per provider plus its key — set them in the repo-root `.env` (Docker) or `apps/agent/.env` + `apps/web/.env.local` (local dev).
+| Path | Set in `.env` |
+|---|---|
+| Cloud LLM (minimum) | `LLM_PROVIDER=gemini` + `GEMINI_API_KEY` (`aistudio.google.com/apikey`, free tier) — or `openai` + `OPENAI_API_KEY` |
+| Voice interview | `LLM_PROVIDER=gemini` · `STT_PROVIDER=deepgram` + `DEEPGRAM_API_KEY` · `TTS_PROVIDER=cartesia` + `CARTESIA_API_KEY` |
+| Live transport | `LIVEKIT_URL` + `LIVEKIT_API_KEY` + `LIVEKIT_API_SECRET`, then `docker compose --profile live up` |
+| 100% local | `LLM_PROVIDER=ollama` (e.g. `qwen3:8b`) + `STT_PROVIDER=whisper` + `TTS_PROVIDER=kokoro` — see [docs/LOCAL_MODELS.md](docs/LOCAL_MODELS.md) |
 
-**Minimum viable LLM-only setup** (prep → question plan → scoring on real models; interview runs on mock voice until you add STT/TTS keys):
+With no keys, every stage falls back to a mock adapter; the tell is a plan containing a single question titled `mock`.
 
-```bash
-LLM_PROVIDER=gemini          # or openai
-GEMINI_API_KEY=...           # free tier is enough to evaluate; https://aistudio.google.com/apikey
-SEARCH_PROVIDER=mock         # company research stays offline/mocked — fine to start
-STT_PROVIDER=mock
-TTS_PROVIDER=mock
-```
-
-**Full voice interview** (adds real-time speech round-trips + transport):
-
-```bash
-LLM_PROVIDER=gemini
-GEMINI_API_KEY=...
-STT_PROVIDER=deepgram        # DEEPGRAM_API_KEY=...
-TTS_PROVIDER=cartesia        # CARTESIA_API_KEY=...
-LIVEKIT_URL=
-LIVEKIT_API_KEY=
-LIVEKIT_API_SECRET=
-```
-
-*(alternatives: `STT_PROVIDER=soniox` + `SONIOX_API_KEY`, `TTS_PROVIDER=elevenlabs` + `ELEVENLABS_API_KEY`, `LLM_PROVIDER=openai` + `OPENAI_API_KEY`, web research via `SEARCH_PROVIDER=tavily|exa` + key.)*
-
-Then:
-
-```bash
-docker compose up            # base stack (web + agent API + knowledge sidecar)
-docker compose --profile live up   # adds the voice worker — REQUIRES LiveKit + STT/TTS/LLM keys
-```
-
-**Verify your keys actually work** (don't trust the UI alone):
+**Verify your setup:**
 
 ```bash
 curl -s http://localhost:8000/api/prep -H 'content-type: application/json' \
-  -d '{"cv_url":"<paste resume text>","jd_text":"<paste job description>","company":"Stripe","language_mode":{"primary":"en","mixed":false}}'
-# poll GET /api/session/{session_id} until "status":"ready", then read prep_warnings:
-#   []                → all real-model stages succeeded, you're golden
-#   "Could not ..."   → a stage failed schema validation and fell back to mock — check
-#                       /agent logs; small weak models are the usual culprit
+  -d '{"cv_url":"<resume text>","jd_text":"<job description>","company":"Acme","language_mode":{"primary":"en","mixed":false}}'
+# poll GET /api/session/{id} until status:"ready"
+# prep_warnings == []  → all real-model stages succeeded
+# "Could not ..."      → a stage fell back to mock (weak/small model is the usual cause)
 ```
 
-**Agent API does not depend on keys?** — correct: with **no** keys set, every stage silently falls back to a **mock adapter**, so the full loop runs offline (that's the "mock plan" you'll see if you skip this section — one question titled "mock" is the tell).
+## Score justification
 
-### 3. Full-stack path (`docker compose up` — verified)
+Every report is an audit trail, not a black box:
 
-```bash
-pnpm deepinterview init    # or: cp .env.example .env  (keys are optional — see note)
-docker compose up --build  # web (:3000) + agent API (:8000) + lightrag (:9621)
-```
-
-> **Status (verified July 2026, Docker 29 / Compose v5):** all images build and the three base services come up **healthy with zero keys** — the agent runs the full prep → plan → score loop on mock adapters, and http://localhost:3000 works offline.
->
-> - **Docker reads the repo-root `.env`** (compose `env_file`). Local dev (`pnpm dev`) instead reads `apps/agent/.env` and `apps/web/.env.local` — keys there are **not** visible to the containers, so put them in the root `.env` for Docker.
-> - The **live voice worker** is opt-in: `docker compose --profile live up`. It **requires** `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` (plus STT/TTS/LLM keys) in the root `.env`; without them the worker exits and restart-loops while the base stack keeps running.
-
-### 4. One-click deploy
-
-[![Deploy web to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/aruninf/local-ai-interviewer)
-
-The button deploys **`apps/web`** to Vercel. The Python **agent** is not serverless — run it via **Docker** (the `agent-api` image above) or on **[LiveKit Cloud Agents](https://docs.livekit.io/agents/)** for the live voice worker, and point the web app at it with `AGENT_API_URL`. See [`docs/DEPLOY.md`](docs/DEPLOY.md) (WP-12, in progress).
-
-<details><summary>Configuring providers & adding a language pack</summary>
-
-- **Keys** live in `.env` only (never committed). See [`.env.example`](.env.example) for the full list (LiveKit, Supabase, R2, STT/TTS/LLM, Tavily/Exa, observability).
-- **Provider choice** is per-component: set `STT_PROVIDER`, `TTS_PROVIDER`, `LLM_PROVIDER` and the matching key. With no keys set, the agent falls back to **mock adapters** so everything still runs offline.
-- **Languages** are pluggable packs. UI strings live in `apps/web/lib/i18n/messages/` (EN + VI shipped); each planned question's `text` is a `LocalizedText` map (`text.en` / `text.vi` / …) alongside a `language_mode`.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev setup and the provider-adapter pattern.
-
-</details>
-
-## Score justification (built for hiring decisions)
-
-Every interview ends in a `ScoreCard` that reads as an audit trail, not a black box:
-
-- **Per-competency scores with evidence** — each `CompetencyScore` carries `score`, `mastery level`, and a quoted `evidence` string from the candidate's own transcript (`shared_models.py`, `CompetencyScore`).
-- **Pre-committed rubric** — the question plan and rubric are generated from the JD *before* the interview, so scoring criteria can't drift mid-interview.
-- **`coverage_pct`** — honestly separates "low score on a 2-minute aborted interview" from "genuinely weak answers"; unanswered questions are excluded from `overall_score`.
-- **Model answers + retrievable transcript** — full context and LLM traces are available over the API (`GET /api/session/{id}`, `/api/traces`), so any score can be reviewed end-to-end.
-- **AI-assisted, human-decided** — scores inform recruiters; they don't auto-reject. Guardrails in [docs/RECRUITER.md](docs/RECRUITER.md).
+- Per-competency scores, each with a quoted **`evidence`** string from the transcript.
+- The rubric is generated from the JD **before** the interview and never drifts.
+- `coverage_pct` separates "weak answers" from "aborted interviews" (unanswered questions don't drag `overall_score`).
+- Full transcript + LLM traces retrievable (`GET /api/session/{id}`, `/api/traces`).
+- **AI-assisted, human-decided** — scores inform recruiters; they never auto-reject.
 
 ## For recruiters
 
-**Shipped today** — the open-source build already produces, stores, and audits justified screening reports over the agent API.
+**Works today:** prep → interview → defensible scorecards over the agent API.
+**Designed, ready to build:** single-use invite links, batch CSV scheduling, candidate intake page, recruiter results view, CSV export, ATS webhooks — see [docs/RECRUITER.md](docs/RECRUITER.md).
 
-**Designed, ready to build** — schedule interviews for candidates as single-use invite links (batch CSV), a candidate intake page with your JD, a recruiter results view (scorecards + transcripts), CSV export and ATS webhooks, and integrity signals. Sign-in-free self-host MVP on capability URLs. Full plan: **[docs/RECRUITER.md](docs/RECRUITER.md)**.
+## Architecture (one paragraph)
 
-## Why DeepInterview
+FastAPI agent (Python, LangGraph) splits the work into **prep / live / post**: five agents precompute CV analysis, JD analysis, company research, gap analysis and the question plan before the call; the live voice loop is cascaded STT → LLM → TTS over LiveKit; four agents score the transcript and write the report. `apps/web` (Next.js) is UI-only, `packages/shared` keeps TS ↔ Pydantic contracts. Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-Practicing in your head (or in a text chat) isn't how interviews work. DeepInterview is **voice-first** — you answer out loud, in real time, like the real thing — and built to be **owned, not rented**:
+## Docs
 
-- **A real conversation, not a form** — a cascaded **STT → LLM → TTS** loop on LiveKit with barge-in, semantic end-of-turn detection, and adaptive follow-ups, so the interviewer reacts to *what you actually said*.
-- **Prepared like a real interviewer** — before the call it reads your CV + the JD, researches the company, and precomputes a personalized question plan with rubrics; the live loop stays fast because the thinking already happened.
-- **Feedback you can act on** — per-competency rubric scores, model answers, and a study coach that targets exactly the gaps the interview exposed (a closed prep ⇄ interview ⇄ feedback loop).
-- **Multilingual by design** — UI in EN+VI, voice interviews in 7 languages including Vietnamese; STT/TTS route by language automatically, and each language is a pluggable pack.
-- **Yours end to end** — Apache 2.0, fully self-hostable, **bring-your-own keys** for every provider — or **run every model locally** (Ollama + Whisper + Kokoro, [docs/LOCAL_MODELS.md](docs/LOCAL_MODELS.md)) — and **no sign-in required**: no account, no login, no data leaving your box unless you choose a provider.
+- [docs/LOCAL_MODELS.md](docs/LOCAL_MODELS.md) — run everything on your own machine
+- [docs/DEPLOY.md](docs/DEPLOY.md) — deployment (Vercel web + Docker/LiveKit agent)
+- [docs/RECRUITER.md](docs/RECRUITER.md) — recruiter scheduling & scorecard design
 
-## Features
+## License
 
-- **Personalized prep** — a LangGraph pipeline reads your CV + the JD, researches the target company, diffs the gap, and a **Question Planner** precomputes the plan, difficulty curve, rubrics, and seeded follow-ups — so the live loop stays fast. Uploaded **CV documents (PDF/DOCX) are parsed to text server-side with [Microsoft markitdown](https://github.com/microsoft/markitdown), with a Gemini multimodal fallback for scanned/image PDFs**.
-- **Community playbook library** — question-bank packs in [`skills/`](skills/) (versioned Markdown + YAML) are retrieved by role/level and injected into the Question Planner: packs the community writes get asked in real interviews. Validate yours with `pnpm deepinterview skills lint`.
-- **Scored feedback** — a rubric-based evaluator + language coach write a per-competency `ScoreCard` with strengths, gaps, model answers, and next steps that map straight back to the questions you were asked.
-- **Prep Coach** *(in progress)* — turns your gaps into an LLM study loop (plan → drills → Socratic chat). Grounded + cited answers are **optional**: set `LIGHTRAG_URL` (or wire a managed RAG behind the same adapter) to ground responses in your own uploaded materials; by default the coach answers honestly without fabricated citations.
-- **Cost-smart avatars** *(in progress)* — the crossfade system + persona fallbacks are built; pre-rendered idle/speaking loops from **any video generator** drop in as packs land ([docs/AVATARS.md](docs/AVATARS.md) — until then it renders a calm gradient stage). Original personas only (no named IP), so runtime cost is **CDN-only — no per-minute avatar fees**.
-
-## Provider matrix
-
-**Every stage is swappable — bring your own vendor.** The live voice loop is **cascaded STT → LLM → TTS** over LiveKit; you pick each vendor with a single env var (`STT_PROVIDER` / `TTS_PROVIDER` / `LLM_PROVIDER`) plus its key. No code changes, no vendor lock-in — providers sit behind a clean adapter interface, and adding a new one is a small PR (see [CONTRIBUTING.md](CONTRIBUTING.md)). With no keys set, every stage falls back to an offline **mock adapter** so the full loop runs in CI and on day-one clones.
-
-| Stage | Choose with | Cloud vendors (pick one) | Fully local | No key set |
-|---|---|---|---|---|
-| **STT** | `STT_PROVIDER` | **Deepgram nova-3** (default) · Soniox | **`whisper`** · **`qwen3-asr`** — any OpenAI-compatible server | mock adapter |
-| **TTS** | `TTS_PROVIDER` | **Cartesia sonic** (default) · ElevenLabs Flash v2.5 · Gemini TTS | **`kokoro`** — kokoro-fastapi | mock adapter |
-| **LLM** | `LLM_PROVIDER` | **Gemini live tier** (default) · OpenAI | **`ollama`** — e.g. Qwen3 | mock adapter |
-
-### Run it 100% local
-
-```bash
-pnpm deepinterview init      # choose "100% local models"
-```
-
-Sets `LLM_PROVIDER=ollama`, `STT_PROVIDER=whisper`, `TTS_PROVIDER=kokoro` — every
-model runs on your machine, no LLM/STT/TTS keys, and nothing about your CV leaves
-your box. Verified end to end on Apple Silicon with `qwen3:8b`: a CV-grounded
-question plan in ~2 minutes, then a **live voice interview with a real
-microphone** through to a scored report.
-
-Two honest caveats: **LiveKit is still the real-time transport** (use LiveKit
-Cloud, or `livekit-server --dev` for a fully offline stack), and local STT is
-batch, so captions appear per utterance rather than word by word. Turn latency
-on local models is not benchmarked, and Kokoro has no Vietnamese voice.
-Full setup, hardware notes and troubleshooting: **[docs/LOCAL_MODELS.md](docs/LOCAL_MODELS.md)**.
-Running against a hosted OpenAI-compatible gateway instead (OpenRouter and
-friends), or stuck on a **CPU-only machine** where the voice stack won't fit?
-See [docs/OPENROUTER_AND_CPU_ONLY.md](docs/OPENROUTER_AND_CPU_ONLY.md).
-
-> **Language routing is automatic — not something you configure.** If your chosen TTS doesn't cover the session language (e.g., Vietnamese on Cartesia), the agent reroutes that session to ElevenLabs or Gemini TTS when a key is present. Cartesia covers en, es, zh, fr, de, ja, pt, hi, it, ko, nl, pl, ru, sv, tr; Deepgram nova-3 covers English + many languages (Vietnamese validation in progress).
-
-## News
-
-> - **[2026.08]** **Run the whole thing on your own machine.** The LLM, speech-to-text and text-to-speech stages now point at local OpenAI-compatible servers — **Ollama**, a local **Whisper** server and **Kokoro** — so an interview needs no model keys at all. Verified end to end on Apple Silicon; pair it with `livekit-server --dev` for a fully offline stack. English voices for now, and turn latency isn't benchmarked. See [docs/LOCAL_MODELS.md](docs/LOCAL_MODELS.md).
-> - **[2026.07]** **Now on Gemini 3.6 Flash + LiveKit Agents 1.6.** Prep and scoring run on **Gemini 3.6 Flash**; the live voice stack moved to livekit-agents 1.6 (Gemini 3-ready function calling on the turn path), and live captions now read as one paragraph per speaker instead of per-fragment lines.
-> - **[2026.07]** **The open-source build is fully uncapped — billing removed.** Self-host with your own keys: no plan gates, no interview caps, no billing tables. Payments live only in the hosted edition; the OSS schema got leaner.
-> - **[2026.07]** **Hardening release.** Opt-in shared-secret auth for the agent API and knowledge sidecar, locked-down Supabase row policies, and periodic transcript checkpointing so a killed process loses seconds of your interview, not all of it.
-> - **[2026.07]** **The study coach now grounds answers in *your* session.** Prep ingests your CV, the JD, and company research into the knowledge sidecar keyed by session — coach answers cite your own materials, not generic tips.
-> - **[2026.06]** **Live voice interviews run on real providers.** The full loop — personalized prep (real Gemini CV/JD analysis + company research) → real-time voice interview on LiveKit (Deepgram STT · Gemini · Cartesia/ElevenLabs TTS) → scored report — now runs end to end, with semantic end-of-turn detection and noise-robust, word-gated barge-in.
-> - **[next]** A hosted live demo, and more language packs.
-
-_(Honest by policy — no shipped-feature claims until they're true. Older entries roll into [CHANGELOG.md](CHANGELOG.md).)_
-
-## Releases
-
-Current release: **[v0.3.0](https://github.com/ngoanpv/DeepInterview/releases/tag/v0.3.0)** (2026-08-02) — a fully local model path (Ollama + Whisper + Kokoro) so an interview needs no model keys at all, on top of the v0.2.0 loop: prep → live voice interview → scoring → coach verified on real providers, uncapped billing-free OSS build, hardened API surface, and the community playbook library wired into the question planner. See [Releases](https://github.com/ngoanpv/DeepInterview/releases) for notes; citation metadata lives in [`CITATION.cff`](CITATION.cff).
-
-## Architecture
-
-The spine of the system is a **prep / live / post** split (strong async models before and after the call; one lean fast model on the live turn path). All three phases thread a single shared `InterviewContext` "blackboard" — written in prep, read+appended in live, read in post.
-
-**Overview — agents & repo design:**
-
-```mermaid
-flowchart LR
-  subgraph web["apps/web — Next.js (UI · upload · token)"]
-    UI["Setup · Live room · Report · Prep Coach"]
-  end
-  subgraph agent["apps/agent — Python · LiveKit · LangGraph"]
-    direction TB
-    prep["PREP agents x5<br/>CV · JD · Company · Gap · Question Planner"]
-    live["LIVE agents x3 + Director<br/>Interviewer · Coding · Behavioral/STAR"]
-    post["POST agents x4<br/>Scorer · Language Coach · Report · Skill Distiller"]
-    coach["Prep Coach"]
-  end
-  kb["services/lightrag<br/>knowledge base"]
-  shared["packages/shared<br/>TS &lt;-&gt; Pydantic contracts"]
-  cli["cli/<br/>first-run setup"]
-  UI <--> agent
-  agent <--> kb
-  shared -.contracts.-> web
-  shared -.contracts.-> agent
-```
-
-**Module boundaries:** `apps/web` owns UI/auth/upload/token and knows nothing about LLM/STT/TTS · `apps/agent` owns the voice loop + prep/post pipelines + avatar render util · `services/lightrag` owns the knowledge base · `cli/` owns first-run setup · **`packages/shared` is the cross-language contract** (TS source of truth, mirrored as Pydantic).
-
-Full request-flow diagrams and the multi-agent design live in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-
-## Using DeepInterview
-
-| Edition | What you get | Auth & billing | Status |
-|---|---|---|---|
-| **Self-host (Apache 2.0)** | The whole platform, your keys, your data. Runs **anonymously** — no sign-in. | None required | ✅ Available now (this repo) |
-| **Cloud (hosted)** | Managed hosting with accounts + plan tiers, so you skip the ops. | Supabase auth + billing | 🟡 Planned (pre-launch) |
-
-> The **auth + billing layer is hosted-only** — the open-source self-host runs the full prep → interview → report → coach loop without any account.
-
-## Credits
-
-**Standing on other people's shoulders.** The local path is built on
-[LiveKit Agents](https://github.com/livekit/agents),
-[Ollama](https://github.com/ollama/ollama),
-[Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) and
-[faster-whisper](https://github.com/SYSTRAN/faster-whisper). If you want a pure
-local *voice pipeline* rather than a full interview platform, go look at
-[**@huggingface**'s `speech-to-speech`](https://github.com/huggingface/speech-to-speech)
-(Apache-2.0) — the same cascaded VAD → STT → LLM → TTS philosophy we use, with
-MLX on Apple Silicon and an OpenAI Realtime-compatible API. It's the closest
-sibling to this project's local mode and the best place to start if you're
-assembling your own.
-
-## Citation
-
-If this project helps your work, please cite it (and the upstream it forked from):
-
-```bibtex
-@software{local-ai-interviewer2026,
-  title  = {local-ai-interviewer: Voice-First, Multilingual AI Mock Interviewer},
-  author = {Arun Kumar (aruninf)},
-  year   = {2026},
-  license = {Apache-2.0},
-  url    = {https://github.com/aruninf/local-ai-interviewer},
-  note   = {Fork of ngoanpv/DeepInterview (Apache-2.0): https://github.com/ngoanpv/DeepInterview}
-}
-```
-
----
-
-<div align="center">
-
-**License:** [Apache-2.0](LICENSE) · Maintained by [aruninf](https://github.com/aruninf)
-
-[back to top](#local-ai-interviewer-voice-first-multilingual-ai-mock-interviewer)
-
-</div>
+[Apache-2.0](LICENSE). Fork of [ngoanpv/DeepInterview](https://github.com/ngoanpv/DeepInterview) — upstream license and attribution retained; see [NOTICE](NOTICE).
