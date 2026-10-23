@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI
 
 from .api import coach as coach_api
 from .api import kb as kb_api
+from .api import keys as keys_api
 from .api import prep as prep_api
 from .api import score as score_api
 from .api import session as session_api
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
     app.include_router(score_api.router, dependencies=guarded)
     app.include_router(coach_api.router, dependencies=guarded)
     app.include_router(kb_api.router, dependencies=guarded)
+    app.include_router(keys_api.router)
     app.include_router(session_api.router)
     # Trace viewer (read-only): list + detail over the local JSONL trace store.
     # Unguarded like the session GET — trace files hold lengths/metadata, and

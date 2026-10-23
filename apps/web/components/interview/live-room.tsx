@@ -47,6 +47,9 @@ import {
 } from "livekit-client";
 import "@livekit/components-styles";
 
+import { Button } from "@/components/ui/button";
+import { KeyRound, Sparkles } from "lucide-react";
+import { ApiKeysModal } from "@/components/keys/api-keys-modal";
 import type { Persona } from "@/lib/personas";
 import { cn } from "@/lib/cn";
 import { useMessages } from "@/lib/i18n/client";
@@ -160,6 +163,7 @@ function Scaffold({
   controls,
   textFallback,
   notice,
+  action,
 }: {
   persona: Persona;
   stage: React.ReactNode;
@@ -168,6 +172,7 @@ function Scaffold({
   controls: React.ReactNode;
   textFallback: React.ReactNode;
   notice?: React.ReactNode;
+  action?: React.ReactNode;
 }) {
   return (
     <main className="relative min-h-screen overflow-hidden bg-paper">
@@ -193,7 +198,10 @@ function Scaffold({
               {persona.name}
             </h1>
           </div>
-          {timer}
+          <div className="flex items-center gap-3">
+            {action}
+            {timer}
+          </div>
         </div>
 
         {/* Centerpiece: avatar + transcript, calm two-column on wide. */}
@@ -283,6 +291,7 @@ function LiveSession({
   );
 
   const [ending, setEnding] = React.useState(false);
+  const [keysOpen, setKeysOpen] = React.useState(false);
 
   // Focus management on connect (issue #52): when the room first connects,
   // move keyboard + screen-reader focus into the transcript log — the
@@ -394,7 +403,8 @@ function LiveSession({
   }
 
   return (
-    <Scaffold
+    <>
+      <Scaffold
       persona={persona}
       stage={<VoiceStage persona={persona} />}
       transcript={
@@ -406,6 +416,17 @@ function LiveSession({
         />
       }
       timer={<SessionTimer running={connected} />}
+      action={
+        <Button
+          variant="out"
+          size="sm"
+          onClick={() => setKeysOpen(true)}
+          className="h-8 gap-1.5 text-xs text-muted hover:text-ink"
+        >
+          <KeyRound className="h-3.5 w-3.5 text-accent" />
+          API Keys
+        </Button>
+      }
       controls={
         <div className="flex flex-col items-center gap-3">
           {/* Visible only when the browser blocks autoplay — StartAudio toggles
@@ -445,6 +466,8 @@ function LiveSession({
         ) : null
       }
     />
+    <ApiKeysModal open={keysOpen} onClose={() => setKeysOpen(false)} />
+  </>
   );
 }
 
@@ -462,48 +485,81 @@ function PreviewSession({
   reason: "unconfigured" | "ended";
 }) {
   const messages = useMessages();
+  const [keysOpen, setKeysOpen] = React.useState(false);
+
   return (
-    <Scaffold
-      persona={persona}
-      stage={<StagePreview persona={persona} />}
-      transcript={<TranscriptPanel turns={SAMPLE_TURNS} className="h-full" />}
-      timer={<SessionTimer running={false} />}
-      controls={
-        <ControlBar
-          micEnabled
-          onToggleMute={() => {}}
-          onEnd={() => {}}
-          disabled
-        />
-      }
-      textFallback={<TextFallback onSend={() => {}} disabled />}
-      notice={
-        reason === "ended" ? (
-          <ErrorNotice
-            title={t(messages, "interview.endedTitle")}
-            message={t(messages, "interview.endedBody")}
-            action={
-              <Link
-                href={`/report/${encodeURIComponent(sessionId)}`}
-                className="rounded-full border border-accent bg-accent-soft px-4 py-2 text-[13px] font-medium text-accent no-underline transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
-              >
-                {t(messages, "interview.viewReport")}
-              </Link>
-            }
-          />
-        ) : (
-          <div
-            className={cn(
-              "mx-auto mt-6 max-w-xl rounded-card border border-line",
-              "bg-paper/70 px-4 py-3 text-center text-[13px] text-muted backdrop-blur-sm",
-            )}
-            role="status"
+    <>
+      <Scaffold
+        persona={persona}
+        stage={<StagePreview persona={persona} />}
+        transcript={<TranscriptPanel turns={SAMPLE_TURNS} className="h-full" />}
+        timer={<SessionTimer running={false} />}
+        action={
+          <Button
+            variant="out"
+            size="sm"
+            onClick={() => setKeysOpen(true)}
+            className="h-8 gap-1.5 text-xs text-muted hover:text-ink"
           >
-            {t(messages, "interview.previewBody")}
-          </div>
-        )
-      }
-    />
+            <KeyRound className="h-3.5 w-3.5 text-accent" />
+            API Keys
+          </Button>
+        }
+        controls={
+          <ControlBar
+            micEnabled
+            onToggleMute={() => {}}
+            onEnd={() => {}}
+            disabled
+          />
+        }
+        textFallback={<TextFallback onSend={() => {}} disabled />}
+        notice={
+          reason === "ended" ? (
+            <ErrorNotice
+              title={t(messages, "interview.endedTitle")}
+              message={t(messages, "interview.endedBody")}
+              action={
+                <Link
+                  href={`/report/${encodeURIComponent(sessionId)}`}
+                  className="rounded-full border border-accent bg-accent-soft px-4 py-2 text-[13px] font-medium text-accent no-underline transition-colors hover:bg-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                >
+                  {t(messages, "interview.viewReport")}
+                </Link>
+              }
+            />
+          ) : (
+            <div
+              className={cn(
+                "mx-auto mt-6 max-w-xl rounded-card border border-accent/40",
+                "bg-paper/90 p-5 text-center shadow-sm backdrop-blur-sm",
+              )}
+              role="status"
+            >
+              <div className="flex items-center justify-center gap-2 font-medium text-ink">
+                <Sparkles className="h-4 w-4 text-accent" />
+                <span>Ready to test a real interview?</span>
+              </div>
+              <p className="mt-1.5 text-[13px] text-muted">
+                You are currently in preview mode. Add your own API keys (Gemini, Deepgram, Cartesia) to activate real voice conversation with the AI interviewer.
+              </p>
+              <div className="mt-3.5 flex items-center justify-center gap-3">
+                <Button
+                  variant="ink"
+                  size="sm"
+                  onClick={() => setKeysOpen(true)}
+                  className="gap-1.5"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Add Your API Keys to Go Live
+                </Button>
+              </div>
+            </div>
+          )
+        }
+      />
+      <ApiKeysModal open={keysOpen} onClose={() => setKeysOpen(false)} />
+    </>
   );
 }
 

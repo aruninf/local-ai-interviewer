@@ -4,6 +4,7 @@ import { getUser } from "@/lib/supabase/server";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/language-toggle";
+import { ApiKeysButton } from "@/components/keys/api-keys-button";
 import { SetupForm } from "@/components/setup/setup-form";
 
 // Evaluate at request time: `isR2Configured()` reads server env, which must not
@@ -31,6 +32,7 @@ export default async function SetupPage() {
           <Eyebrow>local-ai-interviewer</Eyebrow>
         </Link>
         <div className="flex items-center gap-3">
+          <ApiKeysButton />
           <LanguageToggle />
           {user && (
             <form action="/auth/signout" method="post">

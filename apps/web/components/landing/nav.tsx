@@ -4,6 +4,7 @@ import { Container } from "@/components/ui/container";
 import { buttonClasses } from "@/components/ui/button";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { MobileMenu } from "@/components/landing/mobile-menu";
+import { ApiKeysButton } from "@/components/keys/api-keys-button";
 import { GITHUB_URL } from "@/lib/site";
 
 export const NAV_LINKS = [
@@ -49,6 +50,7 @@ export function Nav() {
               Sign in
             </Link>
           ) : null}
+          <ApiKeysButton variant="ghost" size="sm" className="hidden sm:inline-flex" />
           <Link href="/setup" className={buttonClasses()}>
             Start free
           </Link>
