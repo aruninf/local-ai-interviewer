@@ -29,9 +29,9 @@
 <!-- HERO: live voice interview → scored report, recorded from the real app. -->
 ![DeepInterview demo — a live voice interview with streaming captions, then the scored report](assets/demo.gif)
 
-> **Upload your CV and a job description. Talk to an AI interviewer. Get scored — and coached on exactly what you missed.** Voice-first, English-first, and multilingual by design.
+> **Upload your CV and a job description. Talk to an AI interviewer. Get scored — and coached on exactly what you missed.** Built for two sides of the table: **candidates** practice mock interviews; **hiring teams** send scheduled screening interviews and get back rubric-justified scorecards with transcript evidence behind every score.
 
-DeepInterview closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoning runs *before* the call (read your CV + the JD, research the company, build an adaptive question plan), a lean real-time voice loop runs the interview, then strong models score it and route you into a study coach for your weak areas.
+This engine closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoning runs *before* the call (read the CV + the JD, research the company, build an adaptive question plan with a fixed rubric), a lean real-time voice loop runs the interview, then strong models score it — per competency, each score carrying quoted transcript **evidence** — and route the candidate into a study coach for weak areas. See **[docs/RECRUITER.md](docs/RECRUITER.md)** for the recruiter/scheduling feature plan (designed, not built yet).
 
 > **Honest status:** this is an **early open build**. The contracts, prep/live/post pipelines, web screens, and CLI are implemented and **run offline with mock adapters** (no API keys, tests green). Real-time voice, web research, and video avatars need provider keys. `docker compose up` brings up the full base stack (web + agent API + knowledge sidecar, healthy with zero keys); the live voice worker runs via `docker compose --profile live up` once LiveKit keys are set. We mark what's done honestly, per feature, throughout this README.
 
@@ -136,6 +136,22 @@ The button deploys **`apps/web`** to Vercel. The Python **agent** is not serverl
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev setup and the provider-adapter pattern.
 
 </details>
+
+## Score justification (built for hiring decisions)
+
+Every interview ends in a `ScoreCard` that reads as an audit trail, not a black box:
+
+- **Per-competency scores with evidence** — each `CompetencyScore` carries `score`, `mastery level`, and a quoted `evidence` string from the candidate's own transcript (`shared_models.py`, `CompetencyScore`).
+- **Pre-committed rubric** — the question plan and rubric are generated from the JD *before* the interview, so scoring criteria can't drift mid-interview.
+- **`coverage_pct`** — honestly separates "low score on a 2-minute aborted interview" from "genuinely weak answers"; unanswered questions are excluded from `overall_score`.
+- **Model answers + retrievable transcript** — full context and LLM traces are available over the API (`GET /api/session/{id}`, `/api/traces`), so any score can be reviewed end-to-end.
+- **AI-assisted, human-decided** — scores inform recruiters; they don't auto-reject. Guardrails in [docs/RECRUITER.md](docs/RECRUITER.md).
+
+## For recruiters
+
+**Shipped today** — the open-source build already produces, stores, and audits justified screening reports over the agent API.
+
+**Designed, ready to build** — schedule interviews for candidates as single-use invite links (batch CSV), a candidate intake page with your JD, a recruiter results view (scorecards + transcripts), CSV export and ATS webhooks, and integrity signals. Sign-in-free self-host MVP on capability URLs. Full plan: **[docs/RECRUITER.md](docs/RECRUITER.md)**.
 
 ## Why DeepInterview
 
