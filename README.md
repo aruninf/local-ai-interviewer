@@ -2,14 +2,15 @@
 
 <img src="assets/logo.svg" width="132" alt="DeepInterview" />
 
-# DeepInterview: Voice-First, Multilingual AI Mock Interviewer
+# local-ai-interviewer: Voice-First, Multilingual AI Mock Interviewer
+
+> **Maintained by [Arun Kumar / @aruninf](https://github.com/aruninf)** — an Apache-2.0 fork of [ngoanpv/DeepInterview](https://github.com/ngoanpv/DeepInterview). All credit for the original architecture and code goes to the upstream author; see LICENSE and NOTICE.
 
 ### Practice the interview out loud. Then pass the real one. · Multi-agent · Open source
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-4338CA.svg)](LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/ngoanpv/DeepInterview/ci.yml?branch=main&label=build)](https://github.com/ngoanpv/DeepInterview/actions)
-[![Release](https://img.shields.io/github/v/release/ngoanpv/DeepInterview?include_prereleases&label=release&color=4338CA)](https://github.com/ngoanpv/DeepInterview/releases)
-[![Stars](https://img.shields.io/github/stars/ngoanpv/DeepInterview?style=social)](https://github.com/ngoanpv/DeepInterview/stargazers)
+[![Build](https://img.shields.io/github/actions/workflow/status/aruninf/local-ai-interviewer/ci.yml?branch=main&label=build)](https://github.com/aruninf/local-ai-interviewer/actions)
+[![Stars](https://img.shields.io/github/stars/aruninf/local-ai-interviewer?style=social)](https://github.com/aruninf/local-ai-interviewer/stargazers)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-4338CA.svg)](apps/agent)
 [![pnpm](https://img.shields.io/badge/pnpm-workspace-4338CA.svg)](pnpm-workspace.yaml)
 [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/fT7Ecbyq)
@@ -19,9 +20,7 @@
 
 **English** · [Tiếng Việt](README.vi.md)
 
-[Quickstart](#quickstart) · [Why](#why-deepinterview) · [Features](#features) · [Architecture](#architecture) · [Community](#community) · [Contributing](#contributing)
-
-**Contributions wanted** — [interview question-bank packs](https://github.com/ngoanpv/DeepInterview/issues/38) · [language packs & provider adapters](docs/GOOD_FIRST_ISSUES.md) · your packs get asked in real interviews, and no API keys are needed to develop.
+[Quickstart](#quickstart) · [Provider matrix](#provider-matrix) · [Why](#why-deepinterview) · [Features](#features) · [Architecture](#architecture)
 
 </div>
 
@@ -49,8 +48,8 @@ DeepInterview closes the **prep ⇄ interview ⇄ feedback** loop: heavy reasoni
 This is what's tested in CI today. It builds the contracts, runs the test suites, and exercises the prep/live/post pipelines against **mock adapters** — no provider keys required.
 
 ```bash
-git clone https://github.com/ngoanpv/DeepInterview.git
-cd DeepInterview
+git clone https://github.com/aruninf/local-ai-interviewer.git
+cd local-ai-interviewer
 
 pnpm install          # install the JS/TS workspace
 pnpm build            # build packages/shared (contracts) + cli + web
@@ -62,7 +61,55 @@ pnpm deepinterview init   # scaffold .env from .env.example (fill in keys later)
 > `pnpm build` must run before `pnpm deepinterview init` — the CLI is built into `cli/dist/`.
 > For the Python agent: `uv --directory apps/agent sync` then `uv --directory apps/agent run pytest`.
 
-### 2. Full-stack path (`docker compose up` — verified)
+### 2. Real models via API keys (bring-your-own-key)
+
+Every stage takes exactly one env var per provider plus its key — set them in the repo-root `.env` (Docker) or `apps/agent/.env` + `apps/web/.env.local` (local dev).
+
+**Minimum viable LLM-only setup** (prep → question plan → scoring on real models; interview runs on mock voice until you add STT/TTS keys):
+
+```bash
+LLM_PROVIDER=gemini          # or openai
+GEMINI_API_KEY=...           # free tier is enough to evaluate; https://aistudio.google.com/apikey
+SEARCH_PROVIDER=mock         # company research stays offline/mocked — fine to start
+STT_PROVIDER=mock
+TTS_PROVIDER=mock
+```
+
+**Full voice interview** (adds real-time speech round-trips + transport):
+
+```bash
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=...
+STT_PROVIDER=deepgram        # DEEPGRAM_API_KEY=...
+TTS_PROVIDER=cartesia        # CARTESIA_API_KEY=...
+LIVEKIT_URL=
+LIVEKIT_API_KEY=
+LIVEKIT_API_SECRET=
+```
+
+*(alternatives: `STT_PROVIDER=soniox` + `SONIOX_API_KEY`, `TTS_PROVIDER=elevenlabs` + `ELEVENLABS_API_KEY`, `LLM_PROVIDER=openai` + `OPENAI_API_KEY`, web research via `SEARCH_PROVIDER=tavily|exa` + key.)*
+
+Then:
+
+```bash
+docker compose up            # base stack (web + agent API + knowledge sidecar)
+docker compose --profile live up   # adds the voice worker — REQUIRES LiveKit + STT/TTS/LLM keys
+```
+
+**Verify your keys actually work** (don't trust the UI alone):
+
+```bash
+curl -s http://localhost:8000/api/prep -H 'content-type: application/json' \
+  -d '{"cv_url":"<paste resume text>","jd_text":"<paste job description>","company":"Stripe","language_mode":{"primary":"en","mixed":false}}'
+# poll GET /api/session/{session_id} until "status":"ready", then read prep_warnings:
+#   []                → all real-model stages succeeded, you're golden
+#   "Could not ..."   → a stage failed schema validation and fell back to mock — check
+#                       /agent logs; small weak models are the usual culprit
+```
+
+**Agent API does not depend on keys?** — correct: with **no** keys set, every stage silently falls back to a **mock adapter**, so the full loop runs offline (that's the "mock plan" you'll see if you skip this section — one question titled "mock" is the tell).
+
+### 3. Full-stack path (`docker compose up` — verified)
 
 ```bash
 pnpm deepinterview init    # or: cp .env.example .env  (keys are optional — see note)
@@ -74,9 +121,9 @@ docker compose up --build  # web (:3000) + agent API (:8000) + lightrag (:9621)
 > - **Docker reads the repo-root `.env`** (compose `env_file`). Local dev (`pnpm dev`) instead reads `apps/agent/.env` and `apps/web/.env.local` — keys there are **not** visible to the containers, so put them in the root `.env` for Docker.
 > - The **live voice worker** is opt-in: `docker compose --profile live up`. It **requires** `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` (plus STT/TTS/LLM keys) in the root `.env`; without them the worker exits and restart-loops while the base stack keeps running.
 
-### 3. One-click deploy
+### 4. One-click deploy
 
-[![Deploy web to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ngoanpv/DeepInterview)
+[![Deploy web to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/aruninf/local-ai-interviewer)
 
 The button deploys **`apps/web`** to Vercel. The Python **agent** is not serverless — run it via **Docker** (the `agent-api` image above) or on **[LiveKit Cloud Agents](https://docs.livekit.io/agents/)** for the live voice worker, and point the web app at it with `AGENT_API_URL`. See [`docs/DEPLOY.md`](docs/DEPLOY.md) (WP-12, in progress).
 
@@ -197,14 +244,7 @@ Full request-flow diagrams and the multi-agent design live in [`docs/ARCHITECTUR
 
 > The **auth + billing layer is hosted-only** — the open-source self-host runs the full prep → interview → report → coach loop without any account.
 
-## Community
-
-- **[Discord](https://discord.gg/fT7Ecbyq)** — join the build-in-public chat.
-- **[GitHub Discussions](https://github.com/ngoanpv/DeepInterview/discussions)** — questions, ideas, language-pack and playbook requests.
-- **[Issues](https://github.com/ngoanpv/DeepInterview/issues)** — bugs & features (templates provided).
-- **[The playbook library](skills/README.md)** — browsable interview question-bank packs that directly shape the AI's questions; contributions welcome ([#38](https://github.com/ngoanpv/DeepInterview/issues/38)).
-
-Built in the open, with [Claude Code](https://claude.com/claude-code) as a heavily-used co-author — the AI interviewer declined to interview it. We respond to issues — ghosting contributors is the #1 cause of OSS death, and we don't intend to.
+## Credits
 
 **Standing on other people's shoulders.** The local path is built on
 [LiveKit Agents](https://github.com/livekit/agents),
@@ -218,27 +258,18 @@ MLX on Apple Silicon and an OpenAI Realtime-compatible API. It's the closest
 sibling to this project's local mode and the best place to start if you're
 assembling your own.
 
-## Contributing
-
-We'd love your help — especially **interview question-bank packs** ([#38](https://github.com/ngoanpv/DeepInterview/issues/38)), **language packs**, **provider adapters**, and **accessibility**. Start with:
-
-- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, the monorepo map, the work-package model, the provider-adapter (mock-first) pattern, and how to run **offline with no keys**.
-- [Good first issues](docs/GOOD_FIRST_ISSUES.md) — concrete, scoped tasks drawn from real gaps.
-- [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md).
-
-[![Contributors](https://contrib.rocks/image?repo=ngoanpv/DeepInterview)](https://github.com/ngoanpv/DeepInterview/graphs/contributors)
-
 ## Citation
 
-If DeepInterview helps your work, please cite it. Full metadata is in [`CITATION.cff`](CITATION.cff).
+If this project helps your work, please cite it (and the upstream it forked from):
 
 ```bibtex
-@software{deepinterview2026,
-  title  = {DeepInterview: Voice-First, Multilingual AI Mock Interviewer},
-  author = {The DeepInterview contributors},
+@software{local-ai-interviewer2026,
+  title  = {local-ai-interviewer: Voice-First, Multilingual AI Mock Interviewer},
+  author = {Arun Kumar (aruninf)},
   year   = {2026},
   license = {Apache-2.0},
-  url    = {https://github.com/ngoanpv/DeepInterview}
+  url    = {https://github.com/aruninf/local-ai-interviewer},
+  note   = {Fork of ngoanpv/DeepInterview (Apache-2.0): https://github.com/ngoanpv/DeepInterview}
 }
 ```
 
@@ -246,8 +277,8 @@ If DeepInterview helps your work, please cite it. Full metadata is in [`CITATION
 
 <div align="center">
 
-**License:** [Apache-2.0](LICENSE) · Built in the open
+**License:** [Apache-2.0](LICENSE) · Maintained by [aruninf](https://github.com/aruninf)
 
-[back to top](#deepinterview-voice-first-multilingual-ai-mock-interviewer)
+[back to top](#local-ai-interviewer-voice-first-multilingual-ai-mock-interviewer)
 
 </div>
