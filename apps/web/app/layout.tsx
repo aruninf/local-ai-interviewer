@@ -26,7 +26,7 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://deepinterview.ai",
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ),
   title: {
     default: "local-ai-interviewer — Practice the interview out loud",
